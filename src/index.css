@@ -4,4 +4,15 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 60px; /* Adjust based on footer height */
+  margin-top: 60px; /* Adjust based on header height */
 }

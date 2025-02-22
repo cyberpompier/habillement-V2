@@ -11,7 +11,7 @@ import './index.css';
 function App() {
   return (
     <Router>
-      <div className="flex flex-col h-screen bg-ios-background">
+      <div className="flex flex-col min-h-screen bg-ios-background">
         <Header />
         <div className="flex-grow overflow-y-auto">
           <Routes>
