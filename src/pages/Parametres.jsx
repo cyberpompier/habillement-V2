@@ -9,30 +9,15 @@ function Parametres() {
   const [showEditPersonnel, setShowEditPersonnel] = useState(false);
   const [showEditHabillement, setShowEditHabillement] = useState(false);
   const [showAffectationPersonnel, setShowAffectationPersonnel] = useState(false);
+  const [showEditPopup, setShowEditPopup] = useState(false);
   const [personnelList, setPersonnelList] = useState([]);
-  const [habillementList, setHabillementList] = useState([]);
   const [selectedPersonnel, setSelectedPersonnel] = useState(null);
-  const [assignedArticles, setAssignedArticles] = useState([]);
-  const [personnelDetails, setPersonnelDetails] = useState(null);
-
-  // State for affectation form
-  const [affectationPersonnelId, setAffectationPersonnelId] = useState('');
-  const [affectationArticleId, setAffectationArticleId] = useState('');
-
-  // State for personnel form
   const [personnelNom, setPersonnelNom] = useState('');
   const [personnelPrenom, setPersonnelPrenom] = useState('');
   const [personnelGrade, setPersonnelGrade] = useState('');
-  const [personnelPhoto, setPersonnelPhoto] = useState('');
   const [personnelEmail, setPersonnelEmail] = useState('');
   const [personnelCaserne, setPersonnelCaserne] = useState('');
-
-  // State for habillement form
-  const [habillementArticle, setHabillementArticle] = useState('');
-  const [habillementDescription, setHabillementDescription] = useState('');
-  const [habillementTaille, setHabillementTaille] = useState('');
-  const [habillementCode, setHabillementCode] = useState('');
-  const [habillementImage, setHabillementImage] = useState('');
+  const [personnelPhoto, setPersonnelPhoto] = useState('');
 
   useEffect(() => {
     const fetchPersonnel = async () => {
@@ -41,6 +26,8 @@ function Parametres() {
         if (error) {
           console.error('Erreur lors de la récupération du personnel:', error);
         } else {
+          // Sort personnelList alphabetically by 'nom'
+          data.sort((a, b) => a.nom.localeCompare(b.nom));
           setPersonnelList(data || []);
         }
       } catch (error) {
@@ -48,167 +35,98 @@ function Parametres() {
       }
     };
 
-    const fetchHabillement = async () => {
-      try {
-        const { data, error } = await supabase.from('habillement').select('*');
-        if (error) {
-          console.error('Erreur lors de la récupération de l\'habillement:', error);
-        } else {
-          setHabillementList(data || []);
-        }
-      } catch (error) {
-        console.error("Error during fetch:", error);
-      }
-    };
-
     fetchPersonnel();
-    fetchHabillement();
   }, []);
 
-  const handlePersonnelSelect = async (id) => {
-    setSelectedPersonnel(id);
-    await fetchPersonnelDetailsAndArticles(id);
-  };
+  const handleEditPersonnel = async (id) => {
+    const { data, error } = await supabase
+      .from('personnel')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-  const fetchPersonnelDetailsAndArticles = async (id) => {
-    // Fetch personnel details
-    try {
-      const { data: personnelData, error: personnelError } = await supabase
-        .from('personnel')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (personnelError) {
-        console.error('Erreur lors de la récupération des détails du personnel:', personnelError);
-      } else {
-        setPersonnelDetails(personnelData);
-      }
-    } catch (error) {
-      console.error("Error during fetch:", error);
-    }
-
-    // Fetch assigned articles from the 'Masse' table
-    try {
-      const { data, error } = await supabase
-        .from('Masse')
-        .select('habillement(*)')
-        .eq('personnel_id', id);
-
-      if (error) {
-        console.error('Erreur lors de la récupération des articles assignés:', error);
-      } else {
-        // Extract habillement data from the Masse table
-        const assignedHabillement = data.map(item => item.habillement);
-        setAssignedArticles(assignedHabillement || []);
-      }
-    } catch (error) {
-      console.error("Error during fetch:", error);
+    if (error) {
+      console.error('Erreur lors de la récupération des détails du personnel:', error);
+    } else {
+      setSelectedPersonnel(data);
+      setPersonnelNom(data.nom);
+      setPersonnelPrenom(data.prenom);
+      setPersonnelGrade(data.grade);
+      setPersonnelEmail(data.email);
+      setPersonnelCaserne(data.caserne);
+      setPersonnelPhoto(data.photo);
+      setShowEditPopup(true);
     }
   };
 
-  const handlePersonnelSubmit = async (e) => {
+  const handleUpdatePersonnel = async (e) => {
     e.preventDefault();
-    // Handle form submission logic here (e.g., add to Supabase)
+
+    // Validation: Ensure all required fields are filled
+    if (!personnelNom || !personnelPrenom || !personnelGrade || !personnelEmail) {
+      alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    // Additional validation for email format
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(personnelEmail)) {
+      alert("Veuillez entrer une adresse email valide.");
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('personnel')
-        .insert([
-          {
-            nom: personnelNom,
-            prenom: personnelPrenom,
-            grade: personnelGrade,
-            photo: personnelPhoto,
-            email: personnelEmail,
-            caserne: personnelCaserne,
-          },
-        ]);
+        .update({
+          nom: personnelNom,
+          prenom: personnelPrenom,
+          grade: personnelGrade,
+          email: personnelEmail,
+          caserne: personnelCaserne,
+          photo: personnelPhoto,
+        })
+        .eq('id', selectedPersonnel.id);
 
       if (error) {
-        console.error('Erreur lors de l\'ajout du personnel:', error);
-        alert('Impossible d\'ajouter le personnel.');
+        console.error('Erreur lors de la mise à jour du personnel:', error);
+        alert(`Erreur lors de la mise à jour du personnel: ${error.message}`);
       } else {
-        console.log('Personnel ajouté avec succès:', data);
-        // Clear the form
-        setPersonnelNom('');
-        setPersonnelPrenom('');
-        setPersonnelGrade('');
-        setPersonnelPhoto('');
-        setPersonnelEmail('');
-        setPersonnelCaserne('');
+        console.log('Personnel mis à jour avec succès:', data);
+        setShowEditPopup(false);
+        setSelectedPersonnel(null);
+        // Refresh personnel list
+        fetchPersonnel();
       }
     } catch (err) {
-      console.error('Erreur lors de l\'ajout du personnel:', err);
-      alert('Une erreur inattendue s\'est produite.');
+      console.error('Erreur lors de la mise à jour du personnel:', err);
+      alert("Une erreur inattendue s'est produite lors de la mise à jour du personnel.");
     }
-    setShowEditPersonnel(false); // Close the popup after submission
   };
 
-  const handleHabillementSubmit = async (e) => {
-    e.preventDefault();
-    // Handle form submission logic here (e.g., add to Supabase)
-    try {
-      const { data, error } = await supabase
-        .from('habillement')
-        .insert([
-          {
-            article: habillementArticle,
-            description: habillementDescription,
-            code: habillementCode,
-            taille: habillementTaille,
-            image: habillementImage,
-          },
-        ]);
+  const handleDeletePersonnel = async () => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce personnel ?")) {
+      try {
+        const { data, error } = await supabase
+          .from('personnel')
+          .delete()
+          .eq('id', selectedPersonnel.id);
 
-      if (error) {
-        console.error('Erreur lors de l\'ajout de l\'habillement:', error);
-        alert('Impossible d\'ajouter l\'habillement.');
-      } else {
-        console.log('Habillement ajouté avec succès:', data);
-        // Clear the form
-        setHabillementArticle('');
-        setHabillementDescription('');
-        setHabillementTaille('');
-        setHabillementCode('');
-        setHabillementImage('');
+        if (error) {
+          console.error('Erreur lors de la suppression du personnel:', error);
+          alert(`Erreur lors de la suppression du personnel: ${error.message}`);
+        } else {
+          console.log('Personnel supprimé avec succès:', data);
+          setShowEditPopup(false);
+          setSelectedPersonnel(null);
+          // Refresh personnel list
+          fetchPersonnel();
+        }
+      } catch (err) {
+        console.error('Erreur lors de la suppression du personnel:', err);
+        alert("Une erreur inattendue s'est produite lors de la suppression du personnel.");
       }
-    } catch (err) {
-      console.error('Erreur lors de l\'ajout de l\'habillement:', err);
-      alert('Une erreur inattendue s\'est produite.');
     }
-    setShowEditHabillement(false); // Close the popup after submission
-  };
-
-  const handleAffectationSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      // Insert a new entry into the 'Masse' table
-      const { data, error } = await supabase
-        .from('Masse')
-        .insert([
-          {
-            personnel_id: affectationPersonnelId,
-            habillement_id: affectationArticleId,
-          },
-        ]);
-
-      if (error) {
-        console.error('Erreur lors de l\'affectation de l\'habillement:', error);
-        alert('Impossible d\'affecter l\'habillement.');
-      } else {
-        console.log('Habillement affecté avec succès:', data);
-        alert('Habillement affecté avec succès!');
-
-        // After successful affectation, refetch the personnel details and assigned articles
-        await fetchPersonnelDetailsAndArticles(affectationPersonnelId);
-      }
-    } catch (err) {
-      console.error('Erreur lors de l\'affectation de l\'habillement:', err);
-      alert('Une erreur inattendue s\'est produite.');
-    }
-
-    setShowAffectationPersonnel(false); // Close the popup after submission
   };
 
   return (
@@ -234,162 +152,91 @@ function Parametres() {
         >
           Affectation Personnel
         </button>
+        <button
+          className="bg-green-500 text-white rounded-md p-2 w-64"
+          onClick={() => setShowEditPopup(true)}
+        >
+          Edition Personnel
+        </button>
       </div>
 
-      {showEditPersonnel && (
+      {showEditPopup && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
           <div className="bg-white rounded-lg p-4 w-96">
-            <h3 className="text-lg font-semibold mb-2">Ajouter Personnel</h3>
-            <form onSubmit={handlePersonnelSubmit} className="flex flex-col space-y-2">
-              <label>Nom:</label>
-              <input
-                type="text"
-                value={personnelNom}
-                onChange={(e) => setPersonnelNom(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Prenom:</label>
-              <input
-                type="text"
-                value={personnelPrenom}
-                onChange={(e) => setPersonnelPrenom(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Grade:</label>
-              <input
-                type="text"
-                value={personnelGrade}
-                onChange={(e) => setPersonnelGrade(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Photo URL:</label>
-              <input
-                type="text"
-                value={personnelPhoto}
-                onChange={(e) => setPersonnelPhoto(e.target.value)}
-                className="border rounded-md p-1"
-              />
-              <label>Email:</label>
-              <input
-                type="email"
-                value={personnelEmail}
-                onChange={(e) => setPersonnelEmail(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Caserne:</label>
-              <input
-                type="text"
-                value={personnelCaserne}
-                onChange={(e) => setPersonnelCaserne(e.target.value)}
-                className="border rounded-md p-1"
-              />
-              <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
-                Ajouter Personnel
-              </button>
-            </form>
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditPersonnel(false)}>Fermer</button>
-          </div>
-        </div>
-      )}
+            <h3 className="text-lg font-semibold mb-2">Modifier Personnel</h3>
+            <select
+              onChange={(e) => handleEditPersonnel(e.target.value)}
+              className="border rounded-md p-1 mb-4"
+            >
+              <option value="">Sélectionner un personnel</option>
+              {personnelList.map((personnel) => (
+                <option key={personnel.id} value={personnel.id}>
+                  {personnel.nom} {personnel.prenom}
+                </option>
+              ))}
+            </select>
 
-      {showEditHabillement && (
-        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-white rounded-lg p-4 w-96">
-            <h3 className="text-lg font-semibold mb-2">Ajouter Habillement</h3>
-            <form onSubmit={handleHabillementSubmit} className="flex flex-col space-y-2">
-              <label>Article:</label>
-              <input
-                type="text"
-                value={habillementArticle}
-                onChange={(e) => setHabillementArticle(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Description:</label>
-              <input
-                type="text"
-                value={habillementDescription}
-                onChange={(e) => setHabillementDescription(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Taille:</label>
-              <input
-                type="text"
-                value={habillementTaille}
-                onChange={(e) => setHabillementTaille(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Code:</label>
-              <input
-                type="text"
-                value={habillementCode}
-                onChange={(e) => setHabillementCode(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <label>Image URL:</label>
-              <input
-                type="text"
-                value={habillementImage}
-                onChange={(e) => setHabillementImage(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              />
-              <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
-                Ajouter Habillement
-              </button>
-            </form>
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditHabillement(false)}>Fermer</button>
-          </div>
-        </div>
-      )}
-
-      {showAffectationPersonnel && (
-        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-white rounded-lg p-4 w-96">
-            <h3 className="text-lg font-semibold mb-2">Affectation Personnel</h3>
-            <form onSubmit={handleAffectationSubmit} className="flex flex-col space-y-2">
-              <label>Personnel:</label>
-              <select
-                value={affectationPersonnelId}
-                onChange={(e) => setAffectationPersonnelId(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              >
-                <option value="">Sélectionner un personnel</option>
-                {personnelList.map((personnel) => (
-                  <option key={personnel.id} value={personnel.id}>
-                    {personnel.nom} {personnel.prenom}
-                  </option>
-                ))}
-              </select>
-
-              <label>Article:</label>
-              <select
-                value={affectationArticleId}
-                onChange={(e) => setAffectationArticleId(e.target.value)}
-                className="border rounded-md p-1"
-                required
-              >
-                <option value="">Sélectionner un article</option>
-                {habillementList.map((habillement) => (
-                  <option key={habillement.id} value={habillement.id}>
-                    {habillement.article} - {habillement.description}
-                  </option>
-                ))}
-              </select>
-
-              <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
-                Affecter
-              </button>
-            </form>
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowAffectationPersonnel(false)}>Fermer</button>
+            {selectedPersonnel && (
+              <form onSubmit={handleUpdatePersonnel} className="flex flex-col space-y-2">
+                <label>Nom:</label>
+                <input
+                  type="text"
+                  value={personnelNom}
+                  onChange={(e) => setPersonnelNom(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Prenom:</label>
+                <input
+                  type="text"
+                  value={personnelPrenom}
+                  onChange={(e) => setPersonnelPrenom(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Grade:</label>
+                <input
+                  type="text"
+                  value={personnelGrade}
+                  onChange={(e) => setPersonnelGrade(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Email:</label>
+                <input
+                  type="email"
+                  value={personnelEmail}
+                  onChange={(e) => setPersonnelEmail(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Caserne:</label>
+                <input
+                  type="text"
+                  value={personnelCaserne}
+                  onChange={(e) => setPersonnelCaserne(e.target.value)}
+                  className="border rounded-md p-1"
+                />
+                <label>Photo URL:</label>
+                <input
+                  type="text"
+                  value={personnelPhoto}
+                  onChange={(e) => setPersonnelPhoto(e.target.value)}
+                  className="border rounded-md p-1"
+                />
+                <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
+                  Mettre à jour
+                </button>
+                <button
+                  type="button"
+                  className="bg-red-500 text-white rounded-md p-2"
+                  onClick={handleDeletePersonnel}
+                >
+                  Supprimer
+                </button>
+              </form>
+            )}
+            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditPopup(false)}>Fermer</button>
           </div>
         </div>
       )}
