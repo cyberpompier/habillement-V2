@@ -11,6 +11,7 @@ function Personal() {
   const [personnelDetails, setPersonnelDetails] = useState(null);
   const [assignedArticles, setAssignedArticles] = useState([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [searchName, setSearchName] = useState('');
 
   useEffect(() => {
     const fetchPersonnel = async () => {
@@ -31,10 +32,9 @@ function Personal() {
 
   const handlePersonnelSelect = async (id) => {
     setSelectedPersonnel(id);
-    setPersonnelDetails(null); // Clear previous details
-    setAssignedArticles([]); // Clear previous articles
+    setPersonnelDetails(null);
+    setAssignedArticles([]);
 
-    // Fetch personnel details
     try {
       const { data: personnelData, error: personnelError } = await supabase
         .from('personnel')
@@ -51,17 +51,15 @@ function Personal() {
       console.error("Error during fetch:", error);
     }
 
-    // Fetch assigned articles from the 'Masse' table
     try {
       const { data, error } = await supabase
         .from('Masse')
-        .select('habillement(*)')
+        .select('habillement(*), code') // Select habillement data and code
         .eq('personnel_id', id);
 
       if (error) {
         console.error('Erreur lors de la récupération des articles assignés:', error);
       } else {
-        // Vérifiez si les données sont correctement récupérées
         console.log("Assigned articles data:", data);
         setAssignedArticles(data || []);
       }
@@ -69,7 +67,7 @@ function Personal() {
       console.error("Error during fetch:", error);
     }
 
-    setShowDetailsModal(true); // Show the modal
+    setShowDetailsModal(true);
   };
 
   const handleCloseModal = () => {
@@ -77,13 +75,28 @@ function Personal() {
     setPersonnelDetails(null);
     setAssignedArticles([]);
     setSelectedPersonnel(null);
+    setSearchName(''); // Clear the search field
   };
+
+  const filteredPersonnel = personnelList.filter(personnel =>
+    personnel.nom.toLowerCase().includes(searchName.toLowerCase())
+  );
 
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Données du Personnel</h2>
+
+      {/* Search Input */}
+      <input
+        type="text"
+        placeholder="Rechercher par nom..."
+        className="w-full p-2 border rounded-md mb-4"
+        value={searchName}
+        onChange={(e) => setSearchName(e.target.value)}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {personnelList.map((personnel) => (
+        {filteredPersonnel.map((personnel) => (
           <div
             key={personnel.id}
             className="bg-white rounded-lg shadow-md p-4 relative cursor-pointer"
@@ -112,10 +125,17 @@ function Personal() {
         ))}
       </div>
 
-      {/* Modal pour les détails du personnel */}
       {showDetailsModal && personnelDetails && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-white rounded-lg p-8 w-96">
+          <div className="bg-white rounded-lg p-8 w-96 relative">
+            <div className="absolute top-4 right-4 w-20 h-20 rounded-full overflow-hidden">
+              <img
+                src={personnelDetails.photo}
+                alt={`${personnelDetails.prenom} ${personnelDetails.nom}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
             <h3 className="text-lg font-semibold mb-2">Détails du Personnel</h3>
             <p>Nom: {personnelDetails.nom}</p>
             <p>Prenom: {personnelDetails.prenom}</p>
@@ -128,7 +148,7 @@ function Personal() {
               <ul>
                 {assignedArticles.map((article) => (
                   <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
-                    {article.habillement.article} - {article.habillement.description}
+                    {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
                   </li>
                 ))}
               </ul>
