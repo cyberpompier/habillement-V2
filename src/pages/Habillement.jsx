@@ -16,16 +16,17 @@ function Habillement() {
         setLoading(true);
         const { data, error } = await supabase
           .from('habillement')
-          .select('*')
-          .in('article', ['casque', 'veste de feu']);
+          .select('*'); // Fetch all items without filtering
 
         if (error) {
           setError(error);
+          console.error("Supabase fetch error:", error); // Log the error
         } else {
           setHabillementItems(data || []);
         }
       } catch (err) {
         setError(err);
+        console.error("Error during fetch:", err); // Log the error
       } finally {
         setLoading(false);
       }
@@ -79,7 +80,7 @@ function Habillement() {
                 </strong>
                 <span className="text-gray-600 text-sm">{item.code}</span>
               </div>
-               <div className="flex items-center">
+              <div className="flex items-center">
                 <strong className="text-gray-700 text-sm font-bold mr-2">
                   Taille:
                 </strong>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://quvdxjxszquqqcvesntn.supabase.co';
@@ -9,6 +9,15 @@ function Parametres() {
   const [showEditPersonnel, setShowEditPersonnel] = useState(false);
   const [showEditHabillement, setShowEditHabillement] = useState(false);
   const [showAffectationPersonnel, setShowAffectationPersonnel] = useState(false);
+  const [personnelList, setPersonnelList] = useState([]);
+  const [habillementList, setHabillementList] = useState([]);
+  const [selectedPersonnel, setSelectedPersonnel] = useState(null);
+  const [assignedArticles, setAssignedArticles] = useState([]);
+  const [personnelDetails, setPersonnelDetails] = useState(null);
+
+  // State for affectation form
+  const [affectationPersonnelId, setAffectationPersonnelId] = useState('');
+  const [affectationArticleId, setAffectationArticleId] = useState('');
 
   // State for personnel form
   const [personnelNom, setPersonnelNom] = useState('');
@@ -24,6 +33,79 @@ function Parametres() {
   const [habillementTaille, setHabillementTaille] = useState('');
   const [habillementCode, setHabillementCode] = useState('');
   const [habillementImage, setHabillementImage] = useState('');
+
+  useEffect(() => {
+    const fetchPersonnel = async () => {
+      try {
+        const { data, error } = await supabase.from('personnel').select('*');
+        if (error) {
+          console.error('Erreur lors de la récupération du personnel:', error);
+        } else {
+          setPersonnelList(data || []);
+        }
+      } catch (error) {
+        console.error("Error during fetch:", error);
+      }
+    };
+
+    const fetchHabillement = async () => {
+      try {
+        const { data, error } = await supabase.from('habillement').select('*');
+        if (error) {
+          console.error('Erreur lors de la récupération de l\'habillement:', error);
+        } else {
+          setHabillementList(data || []);
+        }
+      } catch (error) {
+        console.error("Error during fetch:", error);
+      }
+    };
+
+    fetchPersonnel();
+    fetchHabillement();
+  }, []);
+
+  const handlePersonnelSelect = async (id) => {
+    setSelectedPersonnel(id);
+    await fetchPersonnelDetailsAndArticles(id);
+  };
+
+  const fetchPersonnelDetailsAndArticles = async (id) => {
+    // Fetch personnel details
+    try {
+      const { data: personnelData, error: personnelError } = await supabase
+        .from('personnel')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (personnelError) {
+        console.error('Erreur lors de la récupération des détails du personnel:', personnelError);
+      } else {
+        setPersonnelDetails(personnelData);
+      }
+    } catch (error) {
+      console.error("Error during fetch:", error);
+    }
+
+    // Fetch assigned articles from the 'Masse' table
+    try {
+      const { data, error } = await supabase
+        .from('Masse')
+        .select('habillement(*)')
+        .eq('personnel_id', id);
+
+      if (error) {
+        console.error('Erreur lors de la récupération des articles assignés:', error);
+      } else {
+        // Extract habillement data from the Masse table
+        const assignedHabillement = data.map(item => item.habillement);
+        setAssignedArticles(assignedHabillement || []);
+      }
+    } catch (error) {
+      console.error("Error during fetch:", error);
+    }
+  };
 
   const handlePersonnelSubmit = async (e) => {
     e.preventDefault();
@@ -43,10 +125,10 @@ function Parametres() {
         ]);
 
       if (error) {
-        console.error('Error adding personnel:', error);
-        alert('Failed to add personnel.');
+        console.error('Erreur lors de l\'ajout du personnel:', error);
+        alert('Impossible d\'ajouter le personnel.');
       } else {
-        console.log('Personnel added successfully:', data);
+        console.log('Personnel ajouté avec succès:', data);
         // Clear the form
         setPersonnelNom('');
         setPersonnelPrenom('');
@@ -56,8 +138,8 @@ function Parametres() {
         setPersonnelCaserne('');
       }
     } catch (err) {
-      console.error('Error adding personnel:', err);
-      alert('An unexpected error occurred.');
+      console.error('Erreur lors de l\'ajout du personnel:', err);
+      alert('Une erreur inattendue s\'est produite.');
     }
     setShowEditPersonnel(false); // Close the popup after submission
   };
@@ -79,10 +161,10 @@ function Parametres() {
         ]);
 
       if (error) {
-        console.error('Error adding habillement:', error);
-        alert('Failed to add habillement.');
+        console.error('Erreur lors de l\'ajout de l\'habillement:', error);
+        alert('Impossible d\'ajouter l\'habillement.');
       } else {
-        console.log('Habillement added successfully:', data);
+        console.log('Habillement ajouté avec succès:', data);
         // Clear the form
         setHabillementArticle('');
         setHabillementDescription('');
@@ -91,10 +173,42 @@ function Parametres() {
         setHabillementImage('');
       }
     } catch (err) {
-      console.error('Error adding habillement:', err);
-      alert('An unexpected error occurred.');
+      console.error('Erreur lors de l\'ajout de l\'habillement:', err);
+      alert('Une erreur inattendue s\'est produite.');
     }
     setShowEditHabillement(false); // Close the popup after submission
+  };
+
+  const handleAffectationSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      // Insert a new entry into the 'Masse' table
+      const { data, error } = await supabase
+        .from('Masse')
+        .insert([
+          {
+            personnel_id: affectationPersonnelId,
+            habillement_id: affectationArticleId,
+          },
+        ]);
+
+      if (error) {
+        console.error('Erreur lors de l\'affectation de l\'habillement:', error);
+        alert('Impossible d\'affecter l\'habillement.');
+      } else {
+        console.log('Habillement affecté avec succès:', data);
+        alert('Habillement affecté avec succès!');
+
+        // After successful affectation, refetch the personnel details and assigned articles
+        await fetchPersonnelDetailsAndArticles(affectationPersonnelId);
+      }
+    } catch (err) {
+      console.error('Erreur lors de l\'affectation de l\'habillement:', err);
+      alert('Une erreur inattendue s\'est produite.');
+    }
+
+    setShowAffectationPersonnel(false); // Close the popup after submission
   };
 
   return (
@@ -106,13 +220,13 @@ function Parametres() {
           className="bg-ios-blue text-white rounded-md p-2 w-64"
           onClick={() => setShowEditPersonnel(true)}
         >
-          Add Personnel
+          Ajouter Personnel
         </button>
         <button
           className="bg-ios-blue text-white rounded-md p-2 w-64"
           onClick={() => setShowEditHabillement(true)}
         >
-          Add Habillement
+          Ajouter Habillement
         </button>
         <button
           className="bg-ios-blue text-white rounded-md p-2 w-64"
@@ -125,7 +239,7 @@ function Parametres() {
       {showEditPersonnel && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
           <div className="bg-white rounded-lg p-4 w-96">
-            <h3 className="text-lg font-semibold mb-2">Add Personnel</h3>
+            <h3 className="text-lg font-semibold mb-2">Ajouter Personnel</h3>
             <form onSubmit={handlePersonnelSubmit} className="flex flex-col space-y-2">
               <label>Nom:</label>
               <input
@@ -149,6 +263,7 @@ function Parametres() {
                 value={personnelGrade}
                 onChange={(e) => setPersonnelGrade(e.target.value)}
                 className="border rounded-md p-1"
+                required
               />
               <label>Photo URL:</label>
               <input
@@ -173,10 +288,10 @@ function Parametres() {
                 className="border rounded-md p-1"
               />
               <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
-                Add Personnel
+                Ajouter Personnel
               </button>
             </form>
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditPersonnel(false)}>Close</button>
+            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditPersonnel(false)}>Fermer</button>
           </div>
         </div>
       )}
@@ -184,7 +299,7 @@ function Parametres() {
       {showEditHabillement && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
           <div className="bg-white rounded-lg p-4 w-96">
-            <h3 className="text-lg font-semibold mb-2">Add Habillement</h3>
+            <h3 className="text-lg font-semibold mb-2">Ajouter Habillement</h3>
             <form onSubmit={handleHabillementSubmit} className="flex flex-col space-y-2">
               <label>Article:</label>
               <input
@@ -200,6 +315,7 @@ function Parametres() {
                 value={habillementDescription}
                 onChange={(e) => setHabillementDescription(e.target.value)}
                 className="border rounded-md p-1"
+                required
               />
               <label>Taille:</label>
               <input
@@ -207,6 +323,7 @@ function Parametres() {
                 value={habillementTaille}
                 onChange={(e) => setHabillementTaille(e.target.value)}
                 className="border rounded-md p-1"
+                required
               />
               <label>Code:</label>
               <input
@@ -214,6 +331,7 @@ function Parametres() {
                 value={habillementCode}
                 onChange={(e) => setHabillementCode(e.target.value)}
                 className="border rounded-md p-1"
+                required
               />
               <label>Image URL:</label>
               <input
@@ -221,26 +339,60 @@ function Parametres() {
                 value={habillementImage}
                 onChange={(e) => setHabillementImage(e.target.value)}
                 className="border rounded-md p-1"
+                required
               />
               <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
-                Add Habillement
+                Ajouter Habillement
               </button>
             </form>
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditHabillement(false)}>Close</button>
+            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditHabillement(false)}>Fermer</button>
           </div>
         </div>
       )}
 
       {showAffectationPersonnel && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-white rounded-lg p-4">
+          <div className="bg-white rounded-lg p-4 w-96">
             <h3 className="text-lg font-semibold mb-2">Affectation Personnel</h3>
-            {/* Add your form for affectation personnel here */}
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowAffectationPersonnel(false)}>Close</button>
+            <form onSubmit={handleAffectationSubmit} className="flex flex-col space-y-2">
+              <label>Personnel:</label>
+              <select
+                value={affectationPersonnelId}
+                onChange={(e) => setAffectationPersonnelId(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              >
+                <option value="">Sélectionner un personnel</option>
+                {personnelList.map((personnel) => (
+                  <option key={personnel.id} value={personnel.id}>
+                    {personnel.nom} {personnel.prenom}
+                  </option>
+                ))}
+              </select>
+
+              <label>Article:</label>
+              <select
+                value={affectationArticleId}
+                onChange={(e) => setAffectationArticleId(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              >
+                <option value="">Sélectionner un article</option>
+                {habillementList.map((habillement) => (
+                  <option key={habillement.id} value={habillement.id}>
+                    {habillement.article} - {habillement.description}
+                  </option>
+                ))}
+              </select>
+
+              <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
+                Affecter
+              </button>
+            </form>
+            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowAffectationPersonnel(false)}>Fermer</button>
           </div>
         </div>
       )}
-			<elevenlabs-convai agent-id="cPSFENw0adX5x4anM4CG"></elevenlabs-convai><script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
     </div>
   );
 }
