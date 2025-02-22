@@ -246,7 +246,7 @@ function Personal() {
               ))}
             </ul>
 
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={handleCloseModal}>
+            <button className="bg-red-200 rounded-md p-2 mt-4" onClick={handleCloseModal}>
               Fermer
             </button>
           </div>
