@@ -20,7 +20,9 @@ function Personal() {
         if (error) {
           console.error('Erreur lors de la récupération du personnel:', error);
         } else {
-          setPersonnelList(data || []);
+          // Sort the personnel list alphabetically by name
+          const sortedPersonnel = [...data].sort((a, b) => a.nom.localeCompare(b.nom));
+          setPersonnelList(sortedPersonnel || []);
         }
       } catch (error) {
         console.error("Error during fetch:", error);
