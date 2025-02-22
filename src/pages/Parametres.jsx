@@ -18,6 +18,8 @@ function Parametres() {
   const [personnelEmail, setPersonnelEmail] = useState('');
   const [personnelCaserne, setPersonnelCaserne] = useState('');
   const [personnelPhoto, setPersonnelPhoto] = useState('');
+  const [updateError, setUpdateError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     const fetchPersonnel = async () => {
@@ -26,7 +28,6 @@ function Parametres() {
         if (error) {
           console.error('Erreur lors de la récupération du personnel:', error);
         } else {
-          // Sort personnelList alphabetically by 'nom'
           data.sort((a, b) => a.nom.localeCompare(b.nom));
           setPersonnelList(data || []);
         }
@@ -61,17 +62,18 @@ function Parametres() {
 
   const handleUpdatePersonnel = async (e) => {
     e.preventDefault();
+    setUpdateError('');
 
     // Validation: Ensure all required fields are filled
     if (!personnelNom || !personnelPrenom || !personnelGrade || !personnelEmail) {
-      alert("Veuillez remplir tous les champs obligatoires.");
+      setUpdateError("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
     // Additional validation for email format
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(personnelEmail)) {
-      alert("Veuillez entrer une adresse email valide.");
+      setUpdateError("Veuillez entrer une adresse email valide.");
       return;
     }
 
@@ -86,26 +88,32 @@ function Parametres() {
           caserne: personnelCaserne,
           photo: personnelPhoto,
         })
-        .eq('id', selectedPersonnel.id);
+        .eq('id', selectedPersonnel.id)
+        .select(); // Ensure we select the updated data
 
       if (error) {
         console.error('Erreur lors de la mise à jour du personnel:', error);
-        alert(`Erreur lors de la mise à jour du personnel: ${error.message}`);
-      } else {
+        setUpdateError(`Erreur lors de la mise à jour du personnel: ${error.message}`);
+      } else if (data && data.length > 0) {
         console.log('Personnel mis à jour avec succès:', data);
         setShowEditPopup(false);
         setSelectedPersonnel(null);
-        // Refresh personnel list
+        fetchPersonnel();
+      } else {
+        console.log('Personnel mis à jour avec succès, no data returned');
+        setShowEditPopup(false);
+        setSelectedPersonnel(null);
         fetchPersonnel();
       }
     } catch (err) {
       console.error('Erreur lors de la mise à jour du personnel:', err);
-      alert("Une erreur inattendue s'est produite lors de la mise à jour du personnel.");
+      setUpdateError("Une erreur inattendue s'est produite lors de la mise à jour du personnel.");
     }
   };
 
   const handleDeletePersonnel = async () => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce personnel ?")) {
+      setDeleteError('');
       try {
         const { data, error } = await supabase
           .from('personnel')
@@ -114,17 +122,16 @@ function Parametres() {
 
         if (error) {
           console.error('Erreur lors de la suppression du personnel:', error);
-          alert(`Erreur lors de la suppression du personnel: ${error.message}`);
+          setDeleteError(`Erreur lors de la suppression du personnel: ${error.message}`);
         } else {
           console.log('Personnel supprimé avec succès:', data);
           setShowEditPopup(false);
           setSelectedPersonnel(null);
-          // Refresh personnel list
           fetchPersonnel();
         }
       } catch (err) {
         console.error('Erreur lors de la suppression du personnel:', err);
-        alert("Une erreur inattendue s'est produite lors de la suppression du personnel.");
+        setDeleteError("Une erreur inattendue s'est produite lors de la suppression du personnel.");
       }
     }
   };
@@ -224,6 +231,8 @@ function Parametres() {
                   onChange={(e) => setPersonnelPhoto(e.target.value)}
                   className="border rounded-md p-1"
                 />
+                {updateError && <p className="text-red-500">{updateError}</p>}
+                {deleteError && <p className="text-red-500">{deleteError}</p>}
                 <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
                   Mettre à jour
                 </button>
