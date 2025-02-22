@@ -13,6 +13,11 @@ function Personal() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [searchName, setSearchName] = useState('');
 
+  const [showPantalonTsi, setShowPantalonTsi] = useState(false);
+  const [showVesteTsi, setShowVesteTsi] = useState(false);
+  const [showBottesLacets, setShowBottesLacets] = useState(false);
+  const [showTenueFeu, setShowTenueFeu] = useState(false);
+
   useEffect(() => {
     const fetchPersonnel = async () => {
       try {
@@ -84,6 +89,27 @@ function Personal() {
     personnel.nom.toLowerCase().includes(searchName.toLowerCase())
   );
 
+  // Function to filter articles by type
+  const filterArticles = (articles, type) => {
+    return articles.filter(article => article.habillement.article.toLowerCase().includes(type.toLowerCase()));
+  };
+
+  const pantalonTsiArticles = filterArticles(assignedArticles, 'pantalon tsi');
+  const vesteTsiArticles = filterArticles(assignedArticles, 'veste tsi');
+  const bottesLacetsArticles = filterArticles(assignedArticles, 'bottes à lacets');
+
+  const tenueFeuKeywords = ['veste de protection', 'surpantalon', 'casque f1', 'casque f2', 'gant de protection'];
+  const tenueFeuArticles = assignedArticles.filter(article =>
+    tenueFeuKeywords.some(keyword => article.habillement.article.toLowerCase().includes(keyword))
+  );
+
+  // Function to filter out tenueFeu articles from the main list
+  const otherArticles = assignedArticles.filter(article => !tenueFeuArticles.includes(article) &&
+    !article.habillement.article.toLowerCase().includes('pantalon tsi') &&
+    !article.habillement.article.toLowerCase().includes('veste tsi') &&
+    !article.habillement.article.toLowerCase().includes('bottes à lacets')
+  );
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Données du Personnel</h2>
@@ -146,17 +172,79 @@ function Personal() {
             <p>Caserne: {personnelDetails.caserne}</p>
 
             <h3 className="text-lg font-semibold mt-4 mb-2">Articles Assignés</h3>
-            {assignedArticles.length > 0 ? (
-              <ul>
-                {assignedArticles.map((article) => (
-                  <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
-                    {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>Aucun article assigné à ce personnel.</p>
-            )}
+
+            {/* Pantalon TSI Dropdown */}
+            <div>
+              <button onClick={() => setShowPantalonTsi(!showPantalonTsi)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+                Pantalon TSI ({pantalonTsiArticles.length})
+              </button>
+              {showPantalonTsi && (
+                <ul>
+                  {pantalonTsiArticles.map((article) => (
+                    <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
+                      {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Veste TSI Dropdown */}
+            <div>
+              <button onClick={() => setShowVesteTsi(!showVesteTsi)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+                Veste TSI ({vesteTsiArticles.length})
+              </button>
+              {showVesteTsi && (
+                <ul>
+                  {vesteTsiArticles.map((article) => (
+                    <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
+                      {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Bottes à lacets Dropdown */}
+            <div>
+              <button onClick={() => setShowBottesLacets(!showBottesLacets)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+                Bottes à lacets ({bottesLacetsArticles.length})
+              </button>
+              {showBottesLacets && (
+                <ul>
+                  {bottesLacetsArticles.map((article) => (
+                    <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
+                      {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Tenue de Feu Dropdown */}
+            <div>
+              <button onClick={() => setShowTenueFeu(!showTenueFeu)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+                Tenue de Feu ({tenueFeuArticles.length})
+              </button>
+              {showTenueFeu && (
+                <ul>
+                  {tenueFeuArticles.map((article) => (
+                    <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
+                      {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Other Articles */}
+            <ul>
+              {otherArticles.map((article) => (
+                <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
+                  {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
+                </li>
+              ))}
+            </ul>
 
             <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={handleCloseModal}>
               Fermer
