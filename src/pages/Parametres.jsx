@@ -10,6 +10,7 @@ function Parametres() {
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
   const [showAddHabillement, setShowAddHabillement] = useState(false);
   const [showAffectHabillement, setShowAffectHabillement] = useState(false);
+  const [showEditHabillementPopup, setShowEditHabillementPopup] = useState(false);
   const [personnelList, setPersonnelList] = useState([]);
   const [newPersonnelNom, setNewPersonnelNom] = useState('');
   const [newPersonnelPrenom, setNewPersonnelPrenom] = useState('');
@@ -35,12 +36,21 @@ function Parametres() {
   const [newHabillementTaille, setNewHabillementTaille] = useState('');
   const [newHabillementImage, setNewHabillementImage] = useState('');
   const [addHabillementError, setAddHabillementError] = useState('');
+  const [habillementList, setHabillementList] = useState([]);
+
+  // Edit Habillement state variables
+  const [selectedHabillement, setSelectedHabillement] = useState(null);
+  const [habillementArticle, setHabillementArticle] = useState('');
+  const [habillementDescription, setHabillementDescription] = useState('');
+  const [habillementCode, setHabillementCode] = useState('');
+  const [habillementTaille, setHabillementTaille] = useState('');
+  const [habillementImage, setHabillementImage] = useState('');
+  const [editHabillementError, setEditHabillementError] = useState('');
 
   // Affect Habillement state variables
   const [selectedPersonnelId, setSelectedPersonnelId] = useState('');
   const [selectedHabillementId, setSelectedHabillementId] = useState('');
   const [newMasseCode, setNewMasseCode] = useState('');
-  const [habillementList, setHabillementList] = useState([]);
   const [affectHabillementError, setAffectHabillementError] = useState('');
 
   useEffect(() => {
@@ -159,6 +169,7 @@ function Parametres() {
         setNewHabillementCode('');
         setNewHabillementTaille('');
         setNewHabillementImage('');
+        fetchHabillement();
       }
     } catch (err) {
       console.error('Erreur lors de l\'ajout de l\'habillement:', err);
@@ -221,6 +232,88 @@ function Parametres() {
       setPersonnelCaserne(data.caserne);
       setPersonnelPhoto(data.photo);
       setShowEditPopup(true);
+    }
+  };
+
+  const handleEditHabillement = async (id) => {
+    const { data, error } = await supabase
+      .from('habillement')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Erreur lors de la récupération des détails de l\'habillement:', error);
+    } else {
+      setSelectedHabillement(data);
+      setHabillementArticle(data.article);
+      setHabillementDescription(data.description);
+      setHabillementCode(data.code);
+      setHabillementTaille(data.taille);
+      setHabillementImage(data.image);
+      setShowEditHabillementPopup(true);
+    }
+  };
+
+  const handleUpdateHabillement = async (e) => {
+    e.preventDefault();
+    setEditHabillementError('');
+
+    if (!habillementArticle || !habillementDescription || !habillementCode || !habillementTaille) {
+      setEditHabillementError("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('habillement')
+        .update({
+          article: habillementArticle,
+          description: habillementDescription,
+          code: habillementCode,
+          taille: habillementTaille,
+          image: habillementImage,
+        })
+        .eq('id', selectedHabillement.id)
+        .select();
+
+      if (error) {
+        console.error('Erreur lors de la mise à jour de l\'habillement:', error);
+        setEditHabillementError(`Erreur lors de la mise à jour de l'habillement: ${error.message}`);
+      } else {
+        console.log('Habillement mis à jour avec succès:', data);
+        setShowEditHabillementPopup(false);
+        setSelectedHabillement(null);
+        fetchHabillement();
+      }
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour de l\'habillement:', err);
+      setEditHabillementError("Une erreur inattendue s'est produite lors de la mise à jour de l'habillement.");
+    }
+  };
+
+  const handleDeleteHabillement = async () => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet habillement ?")) {
+      setDeleteError('');
+      try {
+        const { data, error } = await supabase
+          .from('habillement')
+          .delete()
+          .eq('id', selectedHabillement.id);
+
+        if (error) {
+          console.error('Erreur lors de la suppression de l\'habillement:', error);
+          setDeleteError(`Erreur lors de la suppression de l'habillement: ${error.message}`);
+        } else {
+          console.log('Habillement supprimé avec succès:', data);
+          setShowEditHabillementPopup(false);
+          setSelectedHabillement(null);
+          fetchHabillement();
+        }
+      } catch (err) {
+        console.error('Erreur lors de la suppression de l\'habillement:', err);
+        setDeleteError("Une erreur inattendue s'est produite lors de la suppression de l'habillement.");
+      }
     }
   };
 
@@ -322,6 +415,12 @@ function Parametres() {
           onClick={() => setShowEditPopup(true)}
         >
           Edition Personnel
+        </button>
+        <button
+          className="bg-green-500 text-white rounded-md p-2 w-64"
+          onClick={() => setShowEditHabillementPopup(true)}
+        >
+          Edition Habillement
         </button>
         <button
           className="bg-ios-blue text-white rounded-md p-2 w-64"
@@ -579,6 +678,83 @@ function Parametres() {
                   type="button"
                   className="bg-red-500 text-white rounded-md p-2"
                   onClick={handleDeletePersonnel}
+                >
+                  Supprimer
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showEditHabillementPopup && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
+          <div className="bg-white rounded-lg p-4 w-96">
+            <h3 className="text-lg font-semibold mb-2">Modifier Habillement</h3>
+            <div className="flex items-center justify-between">
+              <select
+                onChange={(e) => handleEditHabillement(e.target.value)}
+                className="border rounded-md p-1 mb-4 flex-grow"
+              >
+                <option value="">Sélectionner un habillement</option>
+                {habillementList.map((habillement) => (
+                  <option key={habillement.id} value={habillement.id}>
+                    {habillement.article} - {habillement.description}
+                  </option>
+                ))}
+              </select>
+              <button className="bg-gray-200 rounded-md p-2 mt-4 ml-2" onClick={() => setShowEditHabillementPopup(false)}>Fermer</button>
+            </div>
+
+            {selectedHabillement && (
+              <form onSubmit={handleUpdateHabillement} className="flex flex-col space-y-2">
+                <label>Article:</label>
+                <input
+                  type="text"
+                  value={habillementArticle}
+                  onChange={(e) => setHabillementArticle(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Description:</label>
+                <input
+                  type="text"
+                  value={habillementDescription}
+                  onChange={(e) => setHabillementDescription(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Code:</label>
+                <input
+                  type="text"
+                  value={habillementCode}
+                  onChange={(e) => setHabillementCode(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Taille:</label>
+                <input
+                  type="text"
+                  value={habillementTaille}
+                  onChange={(e) => setHabillementTaille(e.target.value)}
+                  className="border rounded-md p-1"
+                  required
+                />
+                <label>Image URL:</label>
+                <input
+                  type="text"
+                  value={habillementImage}
+                  onChange={(e) => setHabillementImage(e.target.value)}
+                  className="border rounded-md p-1"
+                />
+                {editHabillementError && <p className="text-red-500">{editHabillementError}</p>}
+                <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
+                  Mettre à jour
+                </button>
+                <button
+                  type="button"
+                  className="bg-red-500 text-white rounded-md p-2"
+                  onClick={handleDeleteHabillement}
                 >
                   Supprimer
                 </button>
