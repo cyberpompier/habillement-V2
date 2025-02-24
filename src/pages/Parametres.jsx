@@ -6,11 +6,20 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function Parametres() {
-  const [showEditPersonnel, setShowEditPersonnel] = useState(false);
-  const [showEditHabillement, setShowEditHabillement] = useState(false);
-  const [showAffectationPersonnel, setShowAffectationPersonnel] = useState(false);
   const [showEditPopup, setShowEditPopup] = useState(false);
+  const [showAddPersonnel, setShowAddPersonnel] = useState(false);
+  const [showAddHabillement, setShowAddHabillement] = useState(false);
+  const [showAffectHabillement, setShowAffectHabillement] = useState(false);
   const [personnelList, setPersonnelList] = useState([]);
+  const [newPersonnelNom, setNewPersonnelNom] = useState('');
+  const [newPersonnelPrenom, setNewPersonnelPrenom] = useState('');
+  const [newPersonnelGrade, setNewPersonnelGrade] = useState('');
+  const [newPersonnelEmail, setNewPersonnelEmail] = useState('');
+  const [newPersonnelCaserne, setNewPersonnelCaserne] = useState('');
+  const [newPersonnelPhoto, setNewPersonnelPhoto] = useState('');
+  const [addError, setAddError] = useState('');
+  const [updateError, setUpdateError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   const [selectedPersonnel, setSelectedPersonnel] = useState(null);
   const [personnelNom, setPersonnelNom] = useState('');
   const [personnelPrenom, setPersonnelPrenom] = useState('');
@@ -18,8 +27,21 @@ function Parametres() {
   const [personnelEmail, setPersonnelEmail] = useState('');
   const [personnelCaserne, setPersonnelCaserne] = useState('');
   const [personnelPhoto, setPersonnelPhoto] = useState('');
-  const [updateError, setUpdateError] = useState('');
-  const [deleteError, setDeleteError] = useState('');
+
+  // Habillement state variables
+  const [newHabillementArticle, setNewHabillementArticle] = useState('');
+  const [newHabillementDescription, setNewHabillementDescription] = useState('');
+  const [newHabillementCode, setNewHabillementCode] = useState('');
+  const [newHabillementTaille, setNewHabillementTaille] = useState('');
+  const [newHabillementImage, setNewHabillementImage] = useState('');
+  const [addHabillementError, setAddHabillementError] = useState('');
+
+  // Affect Habillement state variables
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState('');
+  const [selectedHabillementId, setSelectedHabillementId] = useState('');
+  const [newMasseCode, setNewMasseCode] = useState('');
+  const [habillementList, setHabillementList] = useState([]);
+  const [affectHabillementError, setAffectHabillementError] = useState('');
 
   useEffect(() => {
     const fetchPersonnel = async () => {
@@ -36,8 +58,150 @@ function Parametres() {
       }
     };
 
+    const fetchHabillement = async () => {
+      try {
+        const { data, error } = await supabase.from('habillement').select('*');
+        if (error) {
+          console.error('Erreur lors de la récupération de l\'habillement:', error);
+        } else {
+          setHabillementList(data || []);
+        }
+      } catch (error) {
+        console.error("Error during fetch:", error);
+      }
+    };
+
     fetchPersonnel();
+    fetchHabillement();
   }, []);
+
+  const handleAddPersonnel = async (e) => {
+    e.preventDefault();
+    setAddError('');
+
+    if (!newPersonnelNom || !newPersonnelPrenom || !newPersonnelGrade || !newPersonnelEmail) {
+      setAddError("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(newPersonnelEmail)) {
+      setAddError("Veuillez entrer une adresse email valide.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('personnel')
+        .insert([
+          {
+            nom: newPersonnelNom,
+            prenom: newPersonnelPrenom,
+            grade: newPersonnelGrade,
+            email: newPersonnelEmail,
+            caserne: newPersonnelCaserne,
+            photo: newPersonnelPhoto || 'https://emojis.wiki/emoji-pics/apple/man-firefighter-apple.png',
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error('Erreur lors de l\'ajout du personnel:', error);
+        setAddError(`Erreur lors de l'ajout du personnel: ${error.message}`);
+      } else {
+        console.log('Personnel ajouté avec succès:', data);
+        setShowAddPersonnel(false);
+        setNewPersonnelNom('');
+        setNewPersonnelPrenom('');
+        setNewPersonnelGrade('');
+        setNewPersonnelEmail('');
+        setNewPersonnelCaserne('');
+        setNewPersonnelPhoto('');
+        fetchPersonnel();
+      }
+    } catch (err) {
+      console.error('Erreur lors de l\'ajout du personnel:', err);
+      setAddError("Une erreur inattendue s'est produite lors de l'ajout du personnel.");
+    }
+  };
+
+  const handleAddHabillement = async (e) => {
+    e.preventDefault();
+    setAddHabillementError('');
+
+    if (!newHabillementArticle || !newHabillementDescription || !newHabillementCode || !newHabillementTaille) {
+      setAddHabillementError("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('habillement')
+        .insert([
+          {
+            article: newHabillementArticle,
+            description: newHabillementDescription,
+            code: newHabillementCode,
+            taille: newHabillementTaille,
+            image: newHabillementImage,
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error('Erreur lors de l\'ajout de l\'habillement:', error);
+        setAddHabillementError(`Erreur lors de l'ajout de l'habillement: ${error.message}`);
+      } else {
+        console.log('Habillement ajouté avec succès:', data);
+        setShowAddHabillement(false);
+        setNewHabillementArticle('');
+        setNewHabillementDescription('');
+        setNewHabillementCode('');
+        setNewHabillementTaille('');
+        setNewHabillementImage('');
+      }
+    } catch (err) {
+      console.error('Erreur lors de l\'ajout de l\'habillement:', err);
+      setAddHabillementError("Une erreur inattendue s'est produite lors de l'ajout de l'habillement.");
+    }
+  };
+
+  const handleAffectHabillement = async (e) => {
+    e.preventDefault();
+    setAffectHabillementError('');
+
+    if (!selectedPersonnelId || !selectedHabillementId || !newMasseCode) {
+      setAffectHabillementError("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('Masse')
+        .insert([
+          {
+            personnel_id: selectedPersonnelId,
+            habillement_id: selectedHabillementId,
+            code: newMasseCode,
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error('Erreur lors de l\'affectation de l\'habillement:', error);
+        setAffectHabillementError(`Erreur lors de l'affectation de l'habillement: ${error.message}`);
+      } else {
+        console.log('Habillement affecté avec succès:', data);
+        setShowAffectHabillement(false);
+        setSelectedPersonnelId('');
+        setSelectedHabillementId('');
+        setNewMasseCode('');
+      }
+    } catch (err) {
+      console.error('Erreur lors de l\'affectation de l\'habillement:', err);
+      setAffectHabillementError("Une erreur inattendue s'est produite lors de l'affectation de l'habillement.");
+    }
+  };
 
   const handleEditPersonnel = async (id) => {
     const { data, error } = await supabase
@@ -143,21 +307,15 @@ function Parametres() {
       <div className="flex flex-col items-center space-y-4">
         <button
           className="bg-ios-blue text-white rounded-md p-2 w-64"
-          onClick={() => setShowEditPersonnel(true)}
+          onClick={() => setShowAddPersonnel(true)}
         >
           Ajouter Personnel
         </button>
         <button
           className="bg-ios-blue text-white rounded-md p-2 w-64"
-          onClick={() => setShowEditHabillement(true)}
+          onClick={() => setShowAddHabillement(true)}
         >
           Ajouter Habillement
-        </button>
-        <button
-          className="bg-ios-blue text-white rounded-md p-2 w-64"
-          onClick={() => setShowAffectationPersonnel(true)}
-        >
-          Affectation Personnel
         </button>
         <button
           className="bg-green-500 text-white rounded-md p-2 w-64"
@@ -165,23 +323,204 @@ function Parametres() {
         >
           Edition Personnel
         </button>
+        <button
+          className="bg-ios-blue text-white rounded-md p-2 w-64"
+          onClick={() => setShowAffectHabillement(true)}
+        >
+          Affecter Habillement
+        </button>
       </div>
+
+      {showAddPersonnel && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
+          <div className="bg-white rounded-lg p-4 w-96">
+            <h3 className="text-lg font-semibold mb-2">Ajouter Personnel</h3>
+            <form onSubmit={handleAddPersonnel} className="flex flex-col space-y-2">
+              <label>Nom:</label>
+              <input
+                type="text"
+                value={newPersonnelNom}
+                onChange={(e) => setNewPersonnelNom(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Prenom:</label>
+              <input
+                type="text"
+                value={newPersonnelPrenom}
+                onChange={(e) => setNewPersonnelPrenom(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Grade:</label>
+              <input
+                type="text"
+                value={newPersonnelGrade}
+                onChange={(e) => setNewPersonnelGrade(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Email:</label>
+              <input
+                type="email"
+                value={newPersonnelEmail}
+                onChange={(e) => setNewPersonnelEmail(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Caserne:</label>
+              <input
+                type="text"
+                value={newPersonnelCaserne}
+                onChange={(e) => setNewPersonnelCaserne(e.target.value)}
+                className="border rounded-md p-1"
+              />
+              <label>Photo URL:</label>
+              <input
+                type="text"
+                value={newPersonnelPhoto}
+                onChange={(e) => setNewPersonnelPhoto(e.target.value)}
+                className="border rounded-md p-1"
+              />
+              {addError && <p className="text-red-500">{addError}</p>}
+              <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
+                Ajouter
+              </button>
+              <button type="button" className="bg-gray-200 rounded-md p-2" onClick={() => setShowAddPersonnel(false)}>
+                Fermer
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddHabillement && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
+          <div className="bg-white rounded-lg p-4 w-96">
+            <h3 className="text-lg font-semibold mb-2">Ajouter Habillement</h3>
+            <form onSubmit={handleAddHabillement} className="flex flex-col space-y-2">
+              <label>Article:</label>
+              <input
+                type="text"
+                value={newHabillementArticle}
+                onChange={(e) => setNewHabillementArticle(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Description:</label>
+              <input
+                type="text"
+                value={newHabillementDescription}
+                onChange={(e) => setNewHabillementDescription(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Code:</label>
+              <input
+                type="text"
+                value={newHabillementCode}
+                onChange={(e) => setNewHabillementCode(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Taille:</label>
+              <input
+                type="text"
+                value={newHabillementTaille}
+                onChange={(e) => setNewHabillementTaille(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              <label>Image URL:</label>
+              <input
+                type="text"
+                value={newHabillementImage}
+                onChange={(e) => setNewHabillementImage(e.target.value)}
+                className="border rounded-md p-1"
+              />
+              {addHabillementError && <p className="text-red-500">{addHabillementError}</p>}
+              <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
+                Ajouter
+              </button>
+              <button type="button" className="bg-gray-200 rounded-md p-2" onClick={() => setShowAddHabillement(false)}>
+                Fermer
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAffectHabillement && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
+          <div className="bg-white rounded-lg p-4 w-96">
+            <h3 className="text-lg font-semibold mb-2">Affecter Habillement</h3>
+            <form onSubmit={handleAffectHabillement} className="flex flex-col space-y-2">
+              <label>Personnel:</label>
+              <select
+                value={selectedPersonnelId}
+                onChange={(e) => setSelectedPersonnelId(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              >
+                <option value="">Sélectionner un personnel</option>
+                {personnelList.map((personnel) => (
+                  <option key={personnel.id} value={personnel.id}>
+                    {personnel.nom} {personnel.prenom}
+                  </option>
+                ))}
+              </select>
+              <label>Habillement:</label>
+              <select
+                value={selectedHabillementId}
+                onChange={(e) => setSelectedHabillementId(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              >
+                <option value="">Sélectionner un habillement</option>
+                {habillementList.map((habillement) => (
+                  <option key={habillement.id} value={habillement.id}>
+                    {habillement.article} - {habillement.description}
+                  </option>
+                ))}
+              </select>
+              <label>Code:</label>
+              <input
+                type="text"
+                value={newMasseCode}
+                onChange={(e) => setNewMasseCode(e.target.value)}
+                className="border rounded-md p-1"
+                required
+              />
+              {affectHabillementError && <p className="text-red-500">{affectHabillementError}</p>}
+              <button type="submit" className="bg-ios-blue text-white rounded-md p-2">
+                Affecter
+              </button>
+              <button type="button" className="bg-gray-200 rounded-md p-2" onClick={() => setShowAffectHabillement(false)}>
+                Fermer
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showEditPopup && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
           <div className="bg-white rounded-lg p-4 w-96">
             <h3 className="text-lg font-semibold mb-2">Modifier Personnel</h3>
-            <select
-              onChange={(e) => handleEditPersonnel(e.target.value)}
-              className="border rounded-md p-1 mb-4"
-            >
-              <option value="">Sélectionner un personnel</option>
-              {personnelList.map((personnel) => (
-                <option key={personnel.id} value={personnel.id}>
-                  {personnel.nom} {personnel.prenom}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center justify-between">
+              <select
+                onChange={(e) => handleEditPersonnel(e.target.value)}
+                className="border rounded-md p-1 mb-4 flex-grow"
+              >
+                <option value="">Sélectionner un personnel</option>
+                {personnelList.map((personnel) => (
+                  <option key={personnel.id} value={personnel.id}>
+                    {personnel.nom} {personnel.prenom}
+                  </option>
+                ))}
+              </select>
+              <button className="bg-gray-200 rounded-md p-2 mt-4 ml-2" onClick={() => setShowEditPopup(false)}>Fermer</button>
+            </div>
 
             {selectedPersonnel && (
               <form onSubmit={handleUpdatePersonnel} className="flex flex-col space-y-2">
@@ -245,7 +584,6 @@ function Parametres() {
                 </button>
               </form>
             )}
-            <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={() => setShowEditPopup(false)}>Fermer</button>
           </div>
         </div>
       )}
