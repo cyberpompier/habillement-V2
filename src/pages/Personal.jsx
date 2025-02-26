@@ -12,11 +12,13 @@ function Personal() {
   const [assignedArticles, setAssignedArticles] = useState([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [searchName, setSearchName] = useState('');
+  const [searchCode, setSearchCode] = useState('');
+  const [filteredPersonnel, setFilteredPersonnel] = useState([]);
 
-  const [showPantalonTsi, setShowPantalonTsi] = useState(false);
-  const [showVesteTsi, setShowVesteTsi] = useState(false);
-  const [showBottesLacets, setShowBottesLacets] = useState(false);
-  const [showTenueFeu, setShowTenueFeu] = useState(false);
+  const [showPantalonTsi, setShowVesteTsi] = useState(false);
+  const [showVesteTsi, setShowBottesLacets] = useState(false);
+  const [showBottesLacets, setShowTenueFeu] = useState(false);
+  const [showTenueFeu, setShowPantalonTsi] = useState(false);
 
   useEffect(() => {
     const fetchPersonnel = async () => {
@@ -36,6 +38,61 @@ function Personal() {
 
     fetchPersonnel();
   }, []);
+
+  useEffect(() => {
+    const fetchFilteredPersonnel = async () => {
+      if (!searchCode) {
+        // If searchCode is empty, filter by name only
+        const filteredByName = personnelList.filter(personnel =>
+          personnel.nom.toLowerCase().includes(searchName.toLowerCase())
+        );
+        setFilteredPersonnel(filteredByName);
+        return;
+      }
+
+      try {
+        // Fetch data from 'Masse' table based on the search code
+        const { data: masseData, error: masseError } = await supabase
+          .from('Masse')
+          .select('personnel_id, personnel(nom, prenom, grade, photo, id)')
+          .ilike('code', `%${searchCode}%`);
+
+        if (masseError) {
+          console.error('Error fetching from Masse table:', masseError);
+          setFilteredPersonnel([]);
+          return;
+        }
+
+        if (masseData && masseData.length > 0) {
+          // Extract personnel details from the Masse data
+          const filteredPersonnelList = masseData.map(item => ({
+            id: item.personnel_id,
+            nom: item.personnel?.nom || 'Unknown',
+            prenom: item.personnel?.prenom || 'Unknown',
+            grade: item.personnel?.grade || 'Unknown',
+            photo: item.personnel?.photo || '',
+          }));
+
+          // Filter by name if searchName is not empty
+          const finalFilteredPersonnel = filteredPersonnelList.filter(personnel =>
+            personnel.nom.toLowerCase().includes(searchName.toLowerCase())
+          );
+
+          // Remove duplicates based on personnel id
+          const uniqueFilteredPersonnel = Array.from(new Map(finalFilteredPersonnel.map(item => [item.id, item])).values());
+
+          setFilteredPersonnel(uniqueFilteredPersonnel);
+        } else {
+          setFilteredPersonnel([]);
+        }
+      } catch (error) {
+        console.error('Error fetching filtered personnel:', error);
+        setFilteredPersonnel([]);
+      }
+    };
+
+    fetchFilteredPersonnel();
+  }, [searchName, searchCode, personnelList]);
 
   const handlePersonnelSelect = async (id) => {
     setSelectedPersonnel(id);
@@ -82,12 +139,9 @@ function Personal() {
     setPersonnelDetails(null);
     setAssignedArticles([]);
     setSelectedPersonnel(null);
-    setSearchName(''); // Clear the search field
+    setSearchName('');
+    setSearchCode('');
   };
-
-  const filteredPersonnel = personnelList.filter(personnel =>
-    personnel.nom.toLowerCase().includes(searchName.toLowerCase())
-  );
 
   // Function to filter articles by type
   const filterArticles = (articles, type) => {
@@ -114,14 +168,23 @@ function Personal() {
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Données du Personnel</h2>
 
-      {/* Search Input */}
-      <input
-        type="text"
-        placeholder="Rechercher par nom..."
-        className="w-full p-2 border rounded-md mb-4"
-        value={searchName}
-        onChange={(e) => setSearchName(e.target.value)}
-      />
+      {/* Search Inputs */}
+      <div className="flex flex-col md:flex-row gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Rechercher par nom..."
+          className="w-full p-2 border rounded-md"
+          value={searchName}
+          onChange={(e) => setSearchName(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Rechercher par code..."
+          className="w-full p-2 border rounded-md"
+          value={searchCode}
+          onChange={(e) => setSearchCode(e.target.value)}
+        />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredPersonnel.map((personnel) => (
