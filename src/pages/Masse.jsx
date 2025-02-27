@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://quvdxjxszquqqcvesntn.supabase.co';
@@ -7,16 +7,13 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 function Masse() {
   const [personnelList, setPersonnelList] = useState([]);
-  const [filteredPersonnel, setFilteredPersonnel] = useState([]);
   const [masseArticles, setMasseArticles] = useState([]);
   const [selectedPersonnelId, setSelectedPersonnelId] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showArticlePopup, setShowArticlePopup] = useState(false);
-
   const [articleTaille, setArticleTaille] = useState('');
   const [articleCode, setArticleCode] = useState('');
 
-  
   useEffect(() => {
     const fetchPersonnel = async () => {
       try {
@@ -38,19 +35,19 @@ function Masse() {
     fetchPersonnel();
   }, []);
 
-
   const handlePersonnelSelect = async (personnelId) => {
-   try {
+    setSelectedPersonnelId(personnelId);
+
+    try {
       const { data, error } = await supabase
         .from('Masse')
-        .select('habillement(article, description, code, taille, image)')
+        .select('id, habillement(id, article, description, code, taille, image), code')
         .eq('personnel_id', personnelId);
 
       if (error) {
         console.error('Error fetching Masse articles:', error);
       } else {
         setMasseArticles(data || []);
-        setSelectedPersonnelId(personnelId);
       }
     } catch (error) {
       console.error('Error fetching Masse articles:', error);
@@ -60,7 +57,7 @@ function Masse() {
   const handleArticleSelect = (article) => {
     setSelectedArticle(article);
     setArticleTaille(article.habillement.taille);
-    setArticleCode(article.habillement.code);
+    setArticleCode(article.code);
     setShowArticlePopup(true);
   };
 
@@ -71,25 +68,41 @@ function Masse() {
 
   const handleModifierArticle = async () => {
     try {
-      const { data, error } = await supabase
-        .from('habillement')
-        .update({
-          taille: articleTaille,
-          code: articleCode,
-        })
-        .eq('id', selectedArticle.habillement.id)
-        .select();
-
-      if (error) {
-        console.error('Error updating habillement:', error);
-      } else {
-        console.log('Habillement updated successfully:', data);
-        // Refresh articles
-        handlePersonnelSelect(selectedPersonnelId);
-        handleClosePopup();
+      if (!articleTaille || !articleCode) {
+        alert('Veuillez remplir tous les champs');
+        return;
       }
+
+      // Update Masse table to modify code and habillement table to modify taille
+      const { error: masseError } = await supabase
+        .from('Masse')
+        .update({ code: articleCode })
+        .eq('id', selectedArticle.id);
+
+      if (masseError) {
+        console.error('Erreur lors de la mise à jour de Masse:', masseError);
+        alert(`Erreur lors de la mise à jour de Masse: ${masseError.message}`);
+        return;
+      }
+
+      const { error: habillementError } = await supabase
+        .from('habillement')
+        .update({ taille: articleTaille })
+        .eq('id', selectedArticle.habillement.id);
+
+      if (habillementError) {
+        console.error('Erreur lors de la mise à jour de l\'habillement:', habillementError);
+        alert(`Erreur lors de la mise à jour de l'habillement: ${habillementError.message}`);
+        return;
+      }
+
+      await handlePersonnelSelect(selectedPersonnelId);
+      handleClosePopup();
+      alert('Modifications enregistrées avec succès!');
+
     } catch (error) {
-      console.error('Error updating habillement:', error);
+      console.error('Erreur lors de la modification:', error);
+      alert(`Une erreur est survenue lors de la modification: ${error.message}`);
     }
   };
 
@@ -98,8 +111,7 @@ function Masse() {
       const { data, error } = await supabase
         .from('Masse')
         .delete()
-        .eq('habillement_id', selectedArticle.habillement.id)
-        .eq('personnel_id', selectedPersonnelId);
+        .eq('id', selectedArticle.id);
 
       if (error) {
         console.error('Error deleting Masse entry:', error);
@@ -114,19 +126,15 @@ function Masse() {
     }
   };
 
-
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Masse</h2>
-      {/*
-        <h2 className="text-xl font-semibold mb-4">Masse</h2>
-        <p>Content for Masse will go here.</p>
-      */}
 
       <div className="flex mb-4">
         <select
           className="w-full p-2 border rounded-md"
           onChange={(e) => handlePersonnelSelect(e.target.value)}
+          value={selectedPersonnelId || ''}
         >
           <option value="">Sélectionner un personnel</option>
           {personnelList.map((personnel) => (
@@ -135,8 +143,7 @@ function Masse() {
             </option>
           ))}
         </select>
-        </div>
-
+      </div>
 
       {selectedPersonnelId && masseArticles.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -144,7 +151,7 @@ function Masse() {
             <div key={article.habillement.id} className="bg-white rounded-lg shadow-md p-4 relative cursor-pointer" onClick={() => handleArticleSelect(article)}>
               {article.habillement.image && (
                 <div className="absolute top-2 right-2 w-24 h-24 rounded-full overflow-hidden">
-                 <img
+                  <img
                     src={article.habillement.image}
                     alt={article.habillement.article}
                     className="w-full h-full object-cover"
@@ -161,7 +168,7 @@ function Masse() {
               </div>
               <div className="flex items-center">
                 <strong className="text-gray-700 text-sm font-bold mr-2">Code:</strong>
-                <span className="text-gray-600 text-sm">{article.habillement.code}</span>
+                <span className="text-gray-600 text-sm">{article.code}</span>
               </div>
               <div className="flex items-center">
                 <strong className="text-gray-700 text-sm font-bold mr-2">Taille:</strong>
