@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://quvdxjxszquqqcvesntn.supabase.co';
@@ -10,6 +10,12 @@ function Masse() {
   const [filteredPersonnel, setFilteredPersonnel] = useState([]);
   const [masseArticles, setMasseArticles] = useState([]);
   const [selectedPersonnelId, setSelectedPersonnelId] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [showArticlePopup, setShowArticlePopup] = useState(false);
+
+  const [articleTaille, setArticleTaille] = useState('');
+  const [articleCode, setArticleCode] = useState('');
+
   
   useEffect(() => {
     const fetchPersonnel = async () => {
@@ -51,6 +57,64 @@ function Masse() {
     }
   };
 
+  const handleArticleSelect = (article) => {
+    setSelectedArticle(article);
+    setArticleTaille(article.habillement.taille);
+    setArticleCode(article.habillement.code);
+    setShowArticlePopup(true);
+  };
+
+  const handleClosePopup = () => {
+    setShowArticlePopup(false);
+    setSelectedArticle(null);
+  };
+
+  const handleModifierArticle = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('habillement')
+        .update({
+          taille: articleTaille,
+          code: articleCode,
+        })
+        .eq('id', selectedArticle.habillement.id)
+        .select();
+
+      if (error) {
+        console.error('Error updating habillement:', error);
+      } else {
+        console.log('Habillement updated successfully:', data);
+        // Refresh articles
+        handlePersonnelSelect(selectedPersonnelId);
+        handleClosePopup();
+      }
+    } catch (error) {
+      console.error('Error updating habillement:', error);
+    }
+  };
+
+  const handleDeleteArticle = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('Masse')
+        .delete()
+        .eq('habillement_id', selectedArticle.habillement.id)
+        .eq('personnel_id', selectedPersonnelId);
+
+      if (error) {
+        console.error('Error deleting Masse entry:', error);
+      } else {
+        console.log('Masse entry deleted successfully:', data);
+        // Refresh articles
+        handlePersonnelSelect(selectedPersonnelId);
+        handleClosePopup();
+      }
+    } catch (error) {
+      console.error('Error deleting Masse entry:', error);
+    }
+  };
+
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Masse</h2>
@@ -73,13 +137,14 @@ function Masse() {
         </select>
         </div>
 
+
       {selectedPersonnelId && masseArticles.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {masseArticles.map(article => (
-            <div key={article.habillement.id} className="bg-white rounded-lg shadow-md p-4 relative">
+            <div key={article.habillement.id} className="bg-white rounded-lg shadow-md p-4 relative cursor-pointer" onClick={() => handleArticleSelect(article)}>
               {article.habillement.image && (
                 <div className="absolute top-2 right-2 w-24 h-24 rounded-full overflow-hidden">
-                  <img
+                 <img
                     src={article.habillement.image}
                     alt={article.habillement.article}
                     className="w-full h-full object-cover"
@@ -104,6 +169,60 @@ function Masse() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showArticlePopup && selectedArticle && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
+          <div className="bg-white rounded-lg p-8 w-96 relative">
+            <h2 className="text-xl font-semibold mb-4">{selectedArticle.habillement.article}</h2>
+
+            {selectedArticle.habillement.image && (
+              <div className="absolute top-4 right-4 w-24 h-24 rounded-full overflow-hidden">
+                <img
+                  src={selectedArticle.habillement.image}
+                  alt={selectedArticle.habillement.article}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">Taille:</label>
+              <input
+                type="text"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                value={articleTaille}
+                onChange={(e) => setArticleTaille(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">Code:</label>
+              <input
+                type="text"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                value={articleCode}
+                onChange={(e) => setArticleCode(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-between">
+              <button
+                className="bg-ios-blue text-white rounded-md p-2"
+                onClick={handleModifierArticle}
+              >
+                Modifier
+              </button>
+              <button
+                className="bg-red-500 text-white rounded-md p-2"
+                onClick={handleDeleteArticle}
+              >
+                Supprimer
+              </button>
+              <button className="bg-gray-200 rounded-md p-2" onClick={handleClosePopup}>Annuler</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
