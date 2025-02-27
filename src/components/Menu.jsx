@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaUser, FaTshirt, FaCog } from 'react-icons/fa';
+import { FaUser, FaTshirt, FaCog, FaList } from 'react-icons/fa';
 
 function Menu() {
   return (
@@ -12,6 +12,10 @@ function Menu() {
       <NavLink to="/habillement" className="flex flex-col items-center">
         <FaTshirt size={24} className="text-ios-blue" />
         <span className="text-sm">Habillement</span>
+      </NavLink>
+      <NavLink to="/masse" className="flex flex-col items-center">
+        <FaList size={24} className="text-ios-blue" />
+        <span className="text-sm">Masse</span>
       </NavLink>
       <NavLink to="/parametres" className="flex flex-col items-center">
         <FaCog size={24} className="text-ios-blue" />

@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import Menu from './components/Menu';
 import Personal from './pages/Personal';
 import Habillement from './pages/Habillement';
+import Masse from './pages/Masse';
 import Parametres from './pages/Parametres';
 import './index.css';
 
@@ -17,6 +18,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Personal />} />
             <Route path="/habillement" element={<Habillement />} />
+            <Route path="/masse" element={<Masse />} />
             <Route path="/parametres" element={<Parametres />} />
           </Routes>
         </div>
