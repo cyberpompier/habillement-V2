@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 function Masse() {
   const [personnelList, setPersonnelList] = useState([]);
   const [masseArticles, setMasseArticles] = useState([]);
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState(null);
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState('');
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showArticlePopup, setShowArticlePopup] = useState(false);
   const [articleTaille, setArticleTaille] = useState('');
@@ -73,7 +73,6 @@ function Masse() {
         return;
       }
 
-      // Update Masse table to modify code and habillement table to modify taille
       const { error: masseError } = await supabase
         .from('Masse')
         .update({ code: articleCode })
@@ -107,6 +106,9 @@ function Masse() {
   };
 
   const handleDeleteArticle = async () => {
+    const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?");
+    if (!confirmDelete) return;
+
     try {
       const { data, error } = await supabase
         .from('Masse')
@@ -117,7 +119,6 @@ function Masse() {
         console.error('Error deleting Masse entry:', error);
       } else {
         console.log('Masse entry deleted successfully:', data);
-        // Refresh articles
         handlePersonnelSelect(selectedPersonnelId);
         handleClosePopup();
       }
@@ -134,7 +135,7 @@ function Masse() {
         <select
           className="w-full p-2 border rounded-md"
           onChange={(e) => handlePersonnelSelect(e.target.value)}
-          value={selectedPersonnelId || ''}
+          value={selectedPersonnelId}
         >
           <option value="">Sélectionner un personnel</option>
           {personnelList.map((personnel) => (
