@@ -37,6 +37,7 @@ function Masse() {
 
   const handlePersonnelSelect = async (personnelId) => {
     setSelectedPersonnelId(personnelId);
+    setMasseArticles([]); // Clear existing articles
 
     try {
       const { data, error } = await supabase
@@ -95,6 +96,7 @@ function Masse() {
         return;
       }
 
+      // Refresh articles
       await handlePersonnelSelect(selectedPersonnelId);
       handleClosePopup();
       alert('Modifications enregistrées avec succès!');
@@ -161,19 +163,19 @@ function Masse() {
               )}
               <div className="flex items-center mb-2">
                 <strong className="text-gray-700 text-sm font-bold mr-2">Article:</strong>
-                <span className="text-gray-600 text-sm">{article.habillement.article}</span>
+                <span className="text-gray-600">{article.habillement.article}</span>
               </div>
               <div className="flex items-center">
                 <strong className="text-gray-700 text-sm font-bold mr-2">Description:</strong>
-                <span className="text-gray-600 text-sm">{article.habillement.description}</span>
+                <span className="text-gray-600">{article.habillement.description}</span>
               </div>
               <div className="flex items-center">
                 <strong className="text-gray-700 text-sm font-bold mr-2">Code:</strong>
-                <span className="text-gray-600 text-sm">{article.code}</span>
+                <span className="text-gray-600">{article.code}</span>
               </div>
               <div className="flex items-center">
                 <strong className="text-gray-700 text-sm font-bold mr-2">Taille:</strong>
-                <span className="text-gray-600 text-sm">{article.habillement.taille}</span>
+                <span className="text-gray-600">{article.habillement.taille}</span>
               </div>
             </div>
           ))}
