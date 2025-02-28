@@ -54,7 +54,7 @@ function Habillement() {
               className="bg-white rounded-lg shadow-md p-4 relative"
             >
               {item.image && (
-                <div className="absolute top-2 right-2 w-12 h-12 rounded-full overflow-hidden">
+                <div className="absolute top-2 right-2 w-24 h-24 rounded-full overflow-hidden">
                   <img
                     src={item.image}
                     alt={item.article}
