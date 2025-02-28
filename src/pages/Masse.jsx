@@ -42,7 +42,7 @@ function Masse() {
     try {
       const { data, error } = await supabase
         .from('Masse')
-        .select('id, habillement(id, article, description, code, taille, image), code')
+        .select('id, habillement(id, article, description, code, taille, image), code, taille')
         .eq('personnel_id', personnelId);
 
       if (error) {
@@ -57,7 +57,7 @@ function Masse() {
 
   const handleArticleSelect = (article) => {
     setSelectedArticle(article);
-    setArticleTaille(article.habillement.taille);
+    setArticleTaille(article.taille);
     setArticleCode(article.code);
     setShowArticlePopup(true);
   };
@@ -76,23 +76,12 @@ function Masse() {
 
       const { error: masseError } = await supabase
         .from('Masse')
-        .update({ code: articleCode })
+        .update({ code: articleCode, taille: articleTaille })
         .eq('id', selectedArticle.id);
 
       if (masseError) {
         console.error('Erreur lors de la mise à jour de Masse:', masseError);
         alert(`Erreur lors de la mise à jour de Masse: ${masseError.message}`);
-        return;
-      }
-
-      const { error: habillementError } = await supabase
-        .from('habillement')
-        .update({ taille: articleTaille })
-        .eq('id', selectedArticle.habillement.id);
-
-      if (habillementError) {
-        console.error('Erreur lors de la mise à jour de l\'habillement:', habillementError);
-        alert(`Erreur lors de la mise à jour de l'habillement: ${habillementError.message}`);
         return;
       }
 
@@ -173,9 +162,9 @@ function Masse() {
                 <strong className="text-gray-700 text-sm font-bold mr-2">Code:</strong>
                 <span className="text-gray-600">{article.code}</span>
               </div>
-              <div className="flex items-center">
+               <div className="flex items-center">
                 <strong className="text-gray-700 text-sm font-bold mr-2">Taille:</strong>
-                <span className="text-gray-600">{article.habillement.taille}</span>
+                <span className="text-gray-600">{article.taille}</span>
               </div>
             </div>
           ))}
