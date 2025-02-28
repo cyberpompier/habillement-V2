@@ -15,10 +15,7 @@ function Personal() {
   const [searchCode, setSearchCode] = useState('');
   const [filteredPersonnel, setFilteredPersonnel] = useState([]);
 
-  const [showPantalonTsi, setShowVesteTsi] = useState(false);
-  const [showVesteTsi, setShowBottesLacets] = useState(false);
-  const [showBottesLacets, setShowTenueFeu] = useState(false);
-  const [showTenueFeu, setShowPantalonTsi] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(null);
 
   useEffect(() => {
     const fetchPersonnel = async () => {
@@ -98,6 +95,7 @@ function Personal() {
     setSelectedPersonnel(id);
     setPersonnelDetails(null);
     setAssignedArticles([]);
+    setActiveCategory(null);
 
     try {
       const { data: personnelData, error: personnelError } = await supabase
@@ -141,6 +139,7 @@ function Personal() {
     setSelectedPersonnel(null);
     setSearchName('');
     setSearchCode('');
+    setActiveCategory(null);
   };
 
   // Function to filter articles by type
@@ -163,6 +162,10 @@ function Personal() {
     !article.habillement.article.toLowerCase().includes('veste tsi') &&
     !article.habillement.article.toLowerCase().includes('bottes à lacets')
   );
+
+  const toggleCategory = (category) => {
+    setActiveCategory(activeCategory === category ? null : category);
+  };
 
   return (
     <div className="p-4">
@@ -218,7 +221,7 @@ function Personal() {
 
       {showDetailsModal && personnelDetails && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-white rounded-lg p-8 w-96 relative">
+          <div className="bg-white rounded-lg p-8 w-96 relative overflow-y-auto max-h-screen">
             <div className="absolute top-4 right-4 w-20 h-20 rounded-full overflow-hidden">
               <img
                 src={personnelDetails.photo}
@@ -238,10 +241,10 @@ function Personal() {
 
             {/* Pantalon TSI Dropdown */}
             <div>
-              <button onClick={() => setShowPantalonTsi(!showPantalonTsi)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+              <button onClick={() => toggleCategory('pantalonTsi')} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
                 Pantalon TSI ({pantalonTsiArticles.length})
               </button>
-              {showPantalonTsi && (
+              {activeCategory === 'pantalonTsi' && (
                 <ul>
                   {pantalonTsiArticles.map((article) => (
                     <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
@@ -254,10 +257,10 @@ function Personal() {
 
             {/* Veste TSI Dropdown */}
             <div>
-              <button onClick={() => setShowVesteTsi(!showVesteTsi)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+              <button onClick={() => toggleCategory('vesteTsi')} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
                 Veste TSI ({vesteTsiArticles.length})
               </button>
-              {showVesteTsi && (
+              {activeCategory === 'vesteTsi' && (
                 <ul>
                   {vesteTsiArticles.map((article) => (
                     <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
@@ -270,10 +273,10 @@ function Personal() {
 
             {/* Bottes à lacets Dropdown */}
             <div>
-              <button onClick={() => setShowBottesLacets(!showBottesLacets)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+              <button onClick={() => toggleCategory('bottesLacets')} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
                 Bottes à lacets ({bottesLacetsArticles.length})
               </button>
-              {showBottesLacets && (
+              {activeCategory === 'bottesLacets' && (
                 <ul>
                   {bottesLacetsArticles.map((article) => (
                     <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
@@ -286,10 +289,10 @@ function Personal() {
 
             {/* Tenue de Feu Dropdown */}
             <div>
-              <button onClick={() => setShowTenueFeu(!showTenueFeu)} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+              <button onClick={() => toggleCategory('tenueFeu')} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
                 Tenue de Feu ({tenueFeuArticles.length})
               </button>
-              {showTenueFeu && (
+              {activeCategory === 'tenueFeu' && (
                 <ul>
                   {tenueFeuArticles.map((article) => (
                     <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
@@ -300,14 +303,21 @@ function Personal() {
               )}
             </div>
 
-            {/* Other Articles */}
-            <ul>
-              {otherArticles.map((article) => (
-                <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
-                  {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
-                </li>
-              ))}
-            </ul>
+             {/* Other Articles Dropdown */}
+             <div>
+              <button onClick={() => toggleCategory('otherArticles')} className="bg-gray-200 rounded-md p-2 mb-2 w-full text-left">
+                Autres Articles ({otherArticles.length})
+              </button>
+              {activeCategory === 'otherArticles' && (
+                <ul>
+                  {otherArticles.map((article) => (
+                    <li key={article.habillement.id} className="p-2 rounded-md hover:bg-gray-100">
+                      {article.habillement.article} - {article.habillement.description} (<strong className="font-semibold">{article.code}</strong>)
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             <button className="bg-gray-200 rounded-md p-2 mt-4" onClick={handleCloseModal}>
               Fermer
