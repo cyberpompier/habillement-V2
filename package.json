@@ -2,4 +2,9 @@
   "devDependencies": {
     "vite-plugin-pwa": "^0.21.1"
   }
+  {"scripts": {
+  "build": "hydrogen build" // Ajustez cette commande en fonction de votre processus de construction
+}
+
+  }
 }
